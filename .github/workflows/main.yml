@@ -22,9 +22,9 @@ jobs:
       - name: select workspace
         run: |
           workspace="dev"      
-          if [[ ${{github.ref}} == 'refs/heads/main' ]]; then 
+          if [[ ${{github.ref}} == "refs/heads/main" ]]; then 
             workspace="staging"
-          elif [[ ${{github.event.inputs.deploy_to_production}} == 'true' && ${{github.ref}} =~ 'refs/heads/release/*' ]]; then
+          elif [[ "${{github.event.inputs.deploy_to_production}}" == "true" && ${{github.ref}} =~ "refs/heads/release/*" ]]; then
             workspace="production"
           fi
           echo $workspace
