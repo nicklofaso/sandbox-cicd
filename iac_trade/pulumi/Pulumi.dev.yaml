@@ -1,0 +1,5 @@
+config:
+  gcp:project: rational-photon-282814
+  msat-trade:name_prefix: msat
+  msat-trade:project: rational-photon-282814
+  msat-trade:region: us-east1

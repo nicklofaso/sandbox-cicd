@@ -1,0 +1,45 @@
+version: 2.1
+
+orbs:
+  gcp-cli: circleci/gcp-cli@1.8.4
+  terraform: circleci/terraform@1.0.1
+
+jobs:
+  deploy_infrastructure:
+    executor: gcp-cli/google
+    environment:
+      # GCLOUD_SERVICE_KEY: defined in CircleCI project settings
+      GOOGLE_PROJECT_ID: rational-photon-282814
+      GOOGLE_COMPUTE_ZONE: us-east1-b
+      GOOGLE_APPLICATION_CREDENTIALS: /root/gcloud-service-key.json
+      TF_VAR_google_credentials: /root/gcloud-service-key.json
+    steps:
+      - checkout
+      - run: echo ${HOME}
+      - gcp-cli/install
+      - gcp-cli/initialize
+      - run:
+          name: Install Terraform
+          command: |
+            apt-get install -y wget unzip
+            wget https://releases.hashicorp.com/terraform/0.13.0/terraform_0.13.0_linux_amd64.zip
+            unzip terraform_0.13.0_linux_amd64.zip
+            mv terraform /usr/local/bin
+      - run:
+          name: Create Workspace
+          command: |
+            cd cicd_trade/tf
+            echo $(pwd)
+            terraform init
+            terraform workspace list
+            terraform workspace select test1 || terraform workspace new test1
+            terraform plan 
+            terraform apply --auto-approve
+            sleep 5
+            terraform destroy --auto-approve
+    working_directory: ~/src
+
+workflows:
+  deploy_infrastructure:
+    jobs:
+      - deploy_infrastructure

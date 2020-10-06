@@ -1,0 +1,10 @@
+cidr_block                  = "10.0.0.0/16"
+cidr_subnetwork_width_delta = 4
+cidr_subnetwork_spacing     = 1
+service_account             = "github-actions@rational-photon-282814.iam.gserviceaccount.com"
+zones                       = ["us-east1-b"]
+machine_type                = "g1-small"
+min_count                   = 1
+max_count                   = 2
+initial_node_count          = 1
+disk_size_gb                = 10

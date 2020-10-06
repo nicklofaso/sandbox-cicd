@@ -1,31 +1,57 @@
-name: Test Deployment
-on:
-  push:
-    branches:
-      - "main"
-      - "release/*"
-      - "feature/*"
-  workflow_dispatch:
-    inputs:
-      deploy_to_production:
-        description: Set to 'true' to deploy to production
-        default: "false"
-        required: false
+name: GKE Deploy
+on: push
 
 jobs:
-  reftest:
-    name: Ref test
+  apply_terraform:
+    name: Run Terraform
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: cicd_trade/tf
+    #env:
+    # GOOGLE_APPLICATION_CREDENTIALS: specified by GCP setup action
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: select workspace
+
+      - name: Extract branch name
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - run: echo ${{ steps.extract_branch.outputs.branch }}
+
+      # Setup gcloud CLI
+      # saves credentials json to /home/runner/work/sandbox-cicd/sandbox-cicd/<guid>
+      - uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+        with:
+          version: "302.0.0"
+          service_account_key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+          project_id: ${{ secrets.GKE_PROJECT }}
+          export_default_credentials: true
+
+      # Configure Docker to use the gcloud command-line tool as a credential
+      # helper for authentication
+      - run: gcloud --quiet auth configure-docker
+
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 0.13.1
+      - run: terraform init
+
+      - name: terraform select workspace
+        run: terraform workspace select gh2 || terraform workspace new gh2
+
+      - name: terraform plan
         run: |
-          workspace="dev"      
-          if [[ ${{github.ref}} == "refs/heads/main" ]]; then 
-            workspace="staging"
-          elif [[ "${{github.event.inputs.deploy_to_production}}" == "true" && ${{github.ref}} =~ "refs/heads/release/*" ]]; then
-            workspace="production"
-          fi
-          echo $workspace
-          echo "::set-output name=workspace::${workspace}"
+          terraform plan -var="google_credentials=$GOOGLE_APPLICATION_CREDENTIALS"
+      # commenting to not spend GitHub Action minutes
+      - name: terraform apply
+        run: |
+          terraform apply --auto-approve -var="google_credentials=$GOOGLE_APPLICATION_CREDENTIALS"
+        timeout-minutes: 20
+      - name: terraform destroy
+        run: |
+          sleep 20
+          terraform destroy --auto-approve -var="google_credentials=$GOOGLE_APPLICATION_CREDENTIALS"
+        timeout-minutes: 20
