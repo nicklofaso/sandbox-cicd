@@ -1,5 +1,17 @@
 name: GKE Deploy
-on: push
+on:
+  push:
+    branches:
+      - "main"
+      - "release/*"
+      - "feature/*"
+  # Can only deploy to production manually
+  workflow_dispatch:
+    inputs:
+      deploy_to_production:
+        description: Set to 'true' to deploy to production
+        default: "false"
+        required: true
 
 jobs:
   apply_terraform:
